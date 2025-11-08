@@ -177,54 +177,67 @@ namespace secureAuth0.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> LinkAccount(string primaryUserId, string secondaryUserId, string provider)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LinkAccount(string primaryUserId, string secondaryProvider, string secondaryUserId)
         {
             try
             {
+                Console.WriteLine($"=== LinkAccount Called ===");
+                Console.WriteLine($"Primary User ID: {primaryUserId}");
+                Console.WriteLine($"Secondary Provider: {secondaryProvider}");
+                Console.WriteLine($"Secondary User ID: {secondaryUserId}");
+                
                 var accessToken = await GetAuth0AccessTokenAsync();
                 var domain = _configuration["Auth0API:Domain"];
 
                 // Call Auth0 Management API to link accounts
                 var apiClient = new HttpClient();
-                var apiRequest = new HttpRequestMessage(HttpMethod.Post, $"https://{domain}/api/v2/users/{primaryUserId}/identities");
+                var apiUrl = $"https://{domain}/api/v2/users/{primaryUserId}/identities";
+                Console.WriteLine($"API URL: {apiUrl}");
+                
+                var apiRequest = new HttpRequestMessage(HttpMethod.Post, apiUrl);
                 apiRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
                 var linkData = new
                 {
-                    provider = provider,
+                    provider = secondaryProvider,
                     user_id = secondaryUserId
                 };
                 var jsonContent = JsonConvert.SerializeObject(linkData);
+                Console.WriteLine($"Request Body: {jsonContent}");
+                
                 apiRequest.Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
                 var apiResponse = await apiClient.SendAsync(apiRequest);
                 var responseJson = await apiResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Response Status: {apiResponse.StatusCode}");
+                Console.WriteLine($"Response Body: {responseJson}");
 
                 if (apiResponse.IsSuccessStatusCode)
                 {
+                    Console.WriteLine("Account linking successful!");
+                    TempData["SuccessMessage"] = "Accounts linked successfully! Please log in again.";
+                    
                     // Success - force re-authentication with primary account
-                    var returnUrl = Url.Action("Index", "Home");
-                    var authProperties = new LoginAuthenticationPropertiesBuilder()
-                        .WithRedirectUri(returnUrl)
-                        .WithParameter("prompt", "login") // Force fresh login
-                        .Build();
-
                     await HttpContext.SignOutAsync(Auth0Constants.AuthenticationScheme);
                     await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
+                    var returnUrl = Url.Action("LinkedAccountsInfo", "Account");
                     return RedirectToAction("Login", "Account", new { returnUrl = returnUrl });
                 }
                 else
                 {
                     // Handle error
-                    ViewBag.ErrorMessage = $"Failed to link accounts: {responseJson}";
+                    Console.WriteLine($"Account linking failed: {responseJson}");
+                    TempData["ErrorMessage"] = $"Failed to link accounts: {responseJson}";
                     return RedirectToAction("UsersByEmail");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in LinkAccount: {ex.Message}");
-                ViewBag.ErrorMessage = $"Error linking accounts: {ex.Message}";
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                TempData["ErrorMessage"] = $"Error linking accounts: {ex.Message}";
                 return RedirectToAction("UsersByEmail");
             }
         }

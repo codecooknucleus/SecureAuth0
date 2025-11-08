@@ -15,6 +15,22 @@
             </a>
         </div>
 
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
         @if (Model != null && Model.Count > 0)
         {
             <div class="alert alert-info d-flex align-items-center mb-4" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px;">
@@ -87,15 +103,25 @@
                                     @if (Model.Count > 1)
                                     {
                                         <div class="mt-3">
-                                            @using (Html.BeginForm("LinkAccount", "Account", FormMethod.Post))
-                                            {
-                                                <input type="hidden" name="primaryUserId" value="@(i == 0 ? Model[1].user_id : Model[0].user_id)" />
-                                                <input type="hidden" name="secondaryUserId" value="@user.user_id" />
-                                                <input type="hidden" name="provider" value="@(user.identities?.FirstOrDefault()?.provider ?? "auth0")" />
-                                                <button type="submit" class="btn btn-modern btn-sm" onclick="return confirm('Are you sure you want to link this account?')">
-                                                    <i class="fas fa-link me-1"></i>Link Account
-                                                </button>
+                                            @{
+                                                // The OTHER account becomes the primary (the one we keep)
+                                                var otherUser = i == 0 ? Model[1] : Model[0];
+                                                
+                                                // THIS account (user) becomes the secondary (the one being linked)
+                                                var secondaryProvider = user.identities?.FirstOrDefault()?.provider ?? "auth0";
+                                                // Extract just the ID part after the pipe
+                                                var fullUserId = user.user_id;
+                                                var secondaryUserId = fullUserId.Contains("|") ? fullUserId.Split('|')[1] : fullUserId;
                                             }
+                                            <form method="post" action="/Account/LinkAccount" class="link-account-form">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="primaryUserId" value="@otherUser.user_id" />
+                                                <input type="hidden" name="secondaryProvider" value="@secondaryProvider" />
+                                                <input type="hidden" name="secondaryUserId" value="@secondaryUserId" />
+                                                <button type="button" class="btn btn-modern btn-sm" onclick="confirmAndSubmit(this, '@(otherUser.Name ?? otherUser.Email)')">
+                                                    <i class="fas fa-link me-1"></i>Link to Other Account
+                                                </button>
+                                            </form>
                                         </div>
                                     }
                                 </div>
@@ -216,4 +242,28 @@
     font-size: 0.75rem;
     font-weight: 500;
 }
-</style> 
+</style>
+
+<script>
+function confirmAndSubmit(button, accountName) {
+    console.log('confirmAndSubmit called for:', accountName);
+    
+    if (confirm('Link this account to ' + accountName + '?')) {
+        console.log('User confirmed, submitting form...');
+        
+        // Disable button to prevent double submission
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Linking...';
+        
+        // Get the form and submit it
+        var form = button.closest('form');
+        console.log('Form found:', form);
+        console.log('Form action:', form.action);
+        console.log('Form data:', new FormData(form));
+        
+        form.submit();
+    } else {
+        console.log('User cancelled');
+    }
+}
+</script> 
