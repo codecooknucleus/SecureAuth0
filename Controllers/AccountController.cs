@@ -451,6 +451,9 @@ namespace secureAuth0.Controllers
                 var primaryAccount = GetPrimaryAccount(users);
                 var linkedAccountDetails = GetLinkedAccountDetails(primaryAccount);
 
+                // Get primary identity provider info
+                var primaryIdentity = primaryAccount?.identities?.FirstOrDefault();
+                
                 var viewModel = new
                 {
                     hasLinkedAccounts,
@@ -463,7 +466,10 @@ namespace secureAuth0.Controllers
                         email = primaryAccount?.Email,
                         picture = primaryAccount?.picture,
                         created_at = primaryAccount?.created_at,
-                        updated_at = primaryAccount?.updated_at
+                        updated_at = primaryAccount?.updated_at,
+                        primaryProvider = primaryIdentity?.provider,
+                        primaryConnection = primaryIdentity?.connection,
+                        primaryIsSocial = primaryIdentity?.isSocial ?? false
                     },
                     linkedAccounts = linkedAccountDetails,
                     totalAccounts = users?.Count ?? 0,

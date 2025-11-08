@@ -58,8 +58,37 @@
                     </div>
                     
                     <div class="mt-3 pt-3 border-top">
-                        <small class="text-muted">User ID:</small>
-                        <code class="ms-2">@Model.primaryAccount.userId</code>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div>
+                                <small class="text-muted">User ID:</small>
+                                <code class="ms-2">@Model.primaryAccount.userId</code>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(Model.primaryAccount.primaryProvider))
+                            {
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="primary-provider-icon">
+                                        <i class="fab fa-@(Model.primaryAccount.primaryProvider == "google-oauth2" ? "google" : Model.primaryAccount.primaryProvider == "facebook" ? "facebook" : Model.primaryAccount.primaryProvider == "twitter" ? "twitter" : Model.primaryAccount.primaryProvider == "github" ? "github" : "user")"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Primary Identity Provider</small>
+                                        <strong style="font-size: 0.875rem;">@Model.primaryAccount.primaryProvider</strong>
+                                        @if (Model.primaryAccount.primaryIsSocial)
+                                        {
+                                            <span class="identity-type social ms-2">
+                                                <i class="fas fa-share-alt me-1"></i>Social
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="identity-type local ms-2">
+                                                <i class="fas fa-database me-1"></i>Local
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -206,6 +235,19 @@
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
+}
+
+.primary-provider-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .identity-type {
